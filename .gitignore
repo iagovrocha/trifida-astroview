@@ -1,0 +1,22 @@
+# Arquivo de ambiente com segredos
+.env
+
+# Pasta do ambiente virtual Python
+venv/
+.venv/
+env/
+ENV/
+
+# Arquivos de cache e compilados do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Pastas de configuração de IDEs
+.vscode/
+.idea/
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db

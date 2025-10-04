@@ -1,0 +1,16 @@
+# Framework da API
+fastapi
+uvicorn[standard]
+
+# Fila de Mensagens e Tarefas em Background
+celery
+rabbitmq-pika # Broker de mensagens principal
+redis # Para o backend de resultados do Celery
+
+# Machine Learning e Dados
+scikit-learn
+pandas
+numpy
+
+# Configuração e Utilitários
+python-dotenv
