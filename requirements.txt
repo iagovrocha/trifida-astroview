@@ -1,16 +1,21 @@
-# Framework da API
+# --- Framework da API ---
+# Para criar e rodar o servidor web
 fastapi
 uvicorn[standard]
 
-# Fila de Mensagens e Tarefas em Background
-celery
-rabbitmq-pika # Broker de mensagens principal
-redis # Para o backend de resultados do Celery
-
-# Machine Learning e Dados
+# --- Machine Learning e Análise de Dados ---
+# Para carregar e usar seu modelo .pkl e manipular dados
 scikit-learn
 pandas
 numpy
 
-# Configuração e Utilitários
+# --- Análise Geográfica (Geoespacial) ---
+# Para ler mapas de elevação/população e calcular áreas de dano
+rasterio
+geopandas
+shapely
+
+# --- Utilitários ---
+# Para carregar variáveis de ambiente (chaves de API, etc.) do arquivo .env
 python-dotenv
+google-generativeai
