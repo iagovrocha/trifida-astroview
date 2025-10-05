@@ -1,7 +1,5 @@
 import os
 import requests
-import joblib
-
 
 def download_from_drive(file_id, dest_path):
     # Garante que a pasta existe antes de salvar o arquivo
