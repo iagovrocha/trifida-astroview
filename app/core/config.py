@@ -3,5 +3,4 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-RABBITMQ_URL = os.getenv("RABBITMQ_URL")
-REDIS_URL = os.getenv("REDIS_URL")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
