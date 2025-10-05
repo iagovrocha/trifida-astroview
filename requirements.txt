@@ -19,3 +19,5 @@ shapely
 # Para carregar variáveis de ambiente (chaves de API, etc.) do arquivo .env
 python-dotenv
 google-generativeai
+requests
+os
