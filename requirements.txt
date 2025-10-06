@@ -20,4 +20,3 @@ shapely
 python-dotenv
 google-generativeai
 requests
-os

@@ -1,6 +1,10 @@
 import numpy as np
 import joblib
 import pandas as pd
+import warnings
+
+# Suppress scikit-learn version warnings for pre-trained models
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
 
 MODEL_PATH = "ml_models/pha_classifier.pkl"
 PHA_CLASSIFIER_MODEL = joblib.load(MODEL_PATH)

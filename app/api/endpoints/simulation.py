@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from app.models.simulation import SimulationRequest, SimulationResponse
-from app.core.constants import SCENARIOS, CATASTROPHIC_THRESHOLD_MT
+from app.core.constants import SCENARIOS, CATASTROPHIC_THRESHOLD_MT, ASTEROID_TYPE_MAPPING
 import google.generativeai as genai
 from app.models.simulation import ChatRequest
 from app.services.simulation_engine import calculate_damage_from_pair_model, predict_pha_risk
@@ -9,22 +9,36 @@ from app.services.llm_services import gemini_model
 
 router = APIRouter()
 
+
 @router.post("/simulate", response_model=SimulationResponse)
 async def run_synchronous_simulation(request: SimulationRequest):
     """
-    Executa a simulação completa (física, IA, geolocalização) e retorna 
-    um objeto estruturado com KPIs e detalhes.
+    Executes the complete simulation (physics, AI, geolocation) and returns 
+    a structured object with KPIs and details.
     """
-    print(f"--- INICIANDO NOVA SIMULAÇÃO ---")
-    print(f"Input do utilizador: {request.dict()}")
+    print(f"--- STARTING NEW SIMULATION ---")
+    print(f"User input: {request.dict()}")
 
     try:
-        print("Passo A: A executar cálculos de física...")
+        print("Step A: Running physics calculations...")
         asteroid_type = request.asteroid_type
-        if asteroid_type not in SCENARIOS:
-            raise HTTPException(status_code=400, detail=f"Tipo de asteroide inválido: {asteroid_type}")
         
-        scenario_params = SCENARIOS.get(asteroid_type)
+        # Check if asteroid type needs mapping from English to Portuguese
+        if asteroid_type in ASTEROID_TYPE_MAPPING:
+            mapped_asteroid_type = ASTEROID_TYPE_MAPPING[asteroid_type]
+            print(f"Mapping asteroid type: {asteroid_type} -> {mapped_asteroid_type}")
+        else:
+            mapped_asteroid_type = asteroid_type
+        
+        # Validate the mapped asteroid type
+        if mapped_asteroid_type not in SCENARIOS:
+            valid_types = list(ASTEROID_TYPE_MAPPING.keys()) + list(SCENARIOS.keys())
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid asteroid type: {asteroid_type}. Valid types: {valid_types}"
+            )
+        
+        scenario_params = SCENARIOS.get(mapped_asteroid_type)
         engine_args = {
             "diameter_km": request.diameter_km,
             "velocity_km_s": request.velocity_km_s,
@@ -33,37 +47,37 @@ async def run_synchronous_simulation(request: SimulationRequest):
             "eficiencia_eta": scenario_params["eficiencia_eta"]
         }
         physics_results = calculate_damage_from_pair_model(**engine_args)
-        print(" -> Física OK!")
+        print(" -> Physics OK!")
 
-        print("Passo B: A executar predição de IA...")
+        print("Step B: Running AI prediction...")
         ml_features = {
             'absolute_magnitude_h': 22.0, 'diameter_km_avg': request.diameter_km,
             'velocity_km_s': request.velocity_km_s, 'miss_distance_km': 10000000,
             'kinetic_energy_joules': physics_results['kinetic_energy_joules']
         }
         pha_prediction = predict_pha_risk(ml_features)
-        print(" -> IA OK!")
+        print(" -> AI OK!")
 
-        print("Passo D: A aplicar regra de segurança...")
+        print("Step D: Applying safety rule...")
         final_pha_risk = pha_prediction
         risk_source = "Machine Learning"
 
         if physics_results['energia_megatons'] > CATASTROPHIC_THRESHOLD_MT:
             final_pha_risk = True
-            risk_source = "Regra de Segurança de Física"
-        print(" -> Análise de Risco OK!")
+            risk_source = "Physics Safety Rule"
+        print(" -> Risk Analysis OK!")
 
-        print("Passo C: A calcular impacto geográfico...")
+        print("Step C: Calculating geographic impact...")
         final_radius_km = physics_results['raio_dano_final_km']
         population_in_risk = get_population_in_radius(
             lat=request.impact_lat, lng=request.impact_lng, radius_km=final_radius_km
         )
         economic_impact_usd = get_economic_impact(population_in_risk)
-        print(" -> Geografia OK!")
+        print(" -> Geography OK!")
 
-        print("Passo E: A gerar relatório...")
-        llm_report = f"Relatório de IA: Impacto simulado. Risco de PHA previsto: {final_pha_risk} (Fonte: {risk_source}). Energia: {physics_results['energia_megatons']} MT. Dano final: {final_radius_km} km, afetando uma população estimada de {population_in_risk} pessoas, com um impacto económico estimado de ${economic_impact_usd:,.0f} USD."
-        print(" -> Relatório OK!")
+        print("Step E: Generating report...")
+        llm_report = f"AI Report: Impact simulated. PHA risk predicted: {final_pha_risk} (Source: {risk_source}). Energy: {physics_results['energia_megatons']} MT. Final damage: {final_radius_km} km, affecting an estimated population of {population_in_risk} people, with an estimated economic impact of ${economic_impact_usd:,.0f} USD."
+        print(" -> Report OK!")
 
         response = SimulationResponse(
             kpis={
@@ -82,28 +96,28 @@ async def run_synchronous_simulation(request: SimulationRequest):
             }
         )
         
-        print("--- SIMULAÇÃO CONCLUÍDA COM SUCESSO ---")
+        print("--- SIMULATION COMPLETED SUCCESSFULLY ---")
         return response
 
     except Exception as e:
-        print(f"!!! ERRO DURANTE A SIMULAÇÃO: {e} !!!")
+        print(f"!!! ERROR DURING SIMULATION: {e} !!!")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Ocorreu um erro interno no servidor: {e}")
+        raise HTTPException(status_code=500, detail=f"An internal server error occurred: {e}")
     
 
 @router.post("/ask-agent", response_model=str, tags=["Agent"])
 async def ask_agent(request: ChatRequest):
     """
-    Endpoint para o chatbot. Recebe uma pergunta e o contexto da simulação.
+    Chatbot endpoint. Receives a question and simulation context.
     """
     try:
         if not gemini_model:
-            raise HTTPException(status_code=500, detail="Modelo de IA não configurado.")
+            raise HTTPException(status_code=500, detail="AI model not configured.")
 
-        prompt = f"Você é um assistente especialista em asteroides e defesa planetária. Responda à pergunta do utilizador de forma clara e educativa. Contexto da simulação atual: {request.context}. Pergunta do utilizador: {request.question}"
+        prompt = f"You are an expert assistant in asteroids and planetary defense. Answer the user's question clearly and educationally. Current simulation context: {request.context}. User question: {request.question}"
         
         response = gemini_model.generate_content(prompt)
         return response.text
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro no agente de IA: {e}")
+        raise HTTPException(status_code=500, detail=f"AI agent error: {e}")
